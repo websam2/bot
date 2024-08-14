@@ -1,51 +1,60 @@
 import yt_dlp
 import tkinter as tk
-from tkinter import simpledialog, ttk
+from tkinter import simpledialog, filedialog
 import re
 
-def download_youtube_video(video_url, save_path):
+def download_youtube_video(video_url, save_path, quality):
     def progress_hook(d):
         if d['status'] == 'downloading':
             percent_str = re.sub(r'\x1b\[[0-9;]*m', '', d['_percent_str'])
             percent = float(percent_str.strip('%'))
-            progress_var.set(percent)
+            progress_label.config(text=f"Progresso: {percent:.1f}%")
             root.update_idletasks()
 
     ydl_opts = {
         'outtmpl': f'{save_path}/%(title)s.%(ext)s',
-        'format': 'bestvideo+bestaudio/best',
-        'merge_output_format': 'mp4',  # Especifica que o vídeo deve ser convertido para MP4
+        'format': f'bestvideo[height<={quality}]+bestaudio/best',
+        'merge_output_format': 'mp4',
         'progress_hooks': [progress_hook],
     }
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([video_url])
 
-# Configurando a janela principal
+def start_download():
+    video_url = simpledialog.askstring("Input", "Digite a URL do vídeo do YouTube:", parent=root)
+    if video_url:
+        save_path = filedialog.askdirectory(title="Escolha a pasta para salvar o vídeo")
+        if save_path:
+            progress_label.pack(pady=10)
+            label.pack(pady=10)
+            download_youtube_video(video_url, save_path, quality_var.get())
+        else:
+            print("Nenhuma pasta foi selecionada.")
+    else:
+        print("Nenhuma URL foi fornecida.")
+    root.quit()
+
 root = tk.Tk()
 root.title("Download de Vídeo do YouTube")
-root.geometry("400x150")
+root.geometry("400x300")
 
-# Variável que irá armazenar o progresso
-progress_var = tk.DoubleVar()
+quality_var = tk.StringVar(value="1080")
 
-# Barra de progresso
-progress_bar = ttk.Progressbar(root, variable=progress_var, maximum=100)
-progress_bar.pack(pady=20, padx=20, fill=tk.X)
+label_quality = tk.Label(root, text="Escolha a resolução:")
+label_quality.pack(pady=10)
 
-# Solicita a URL do vídeo via pop-up
-video_url = simpledialog.askstring("Input", "Digite a URL do vídeo do YouTube:", parent=root)
+radio_720p = tk.Radiobutton(root, text="720p", variable=quality_var, value="720")
+radio_720p.pack(pady=5)
 
-# Verifica se o usuário forneceu uma URL
-if video_url:
-    save_path = r'C:\Users\scara\OneDrive - PRODESP\AURORA\YouTube'
-    download_youtube_video(video_url, save_path)
-else:
-    print("Nenhuma URL foi fornecida.")
+radio_1080p = tk.Radiobutton(root, text="1080p", variable=quality_var, value="1080")
+radio_1080p.pack(pady=5)
 
-# Fecha a aplicação Tkinter
-root.quit()
+start_button = tk.Button(root, text="Iniciar Download", command=start_download)
+start_button.pack(pady=20)
 
+progress_label = tk.Label(root, text="Progresso: 0%")
 
+label = tk.Label(root, text="Por favor, aguarde ;)")
 
-
+root.mainloop()
