@@ -1,15 +1,21 @@
 {
-    "version": 2,
-    "builds": [
-      {
-        "src": "downloadYoutube.py",
-        "use": "@vercel/python"
-      }
-    ],
-    "routes": [
-      {
-        "src": "/(.*)",
-        "dest": "downloadYoutube.py"
-      }
-    ]
-  }
+	"version": 2,
+	"builds": [
+		{
+			"src": "downloadYoutube.py",
+			"use": "@vercel/python",
+			"config": { "maxLambdaSize": "15mb" }
+		}
+	],
+	"routes": [
+		{
+			"src": "/(.*)",
+			"dest": "downloadYoutube.py"
+		}
+	],
+	"build": {
+		"env": {
+			"PIP_TARGET": "."
+		}
+	}
+}
