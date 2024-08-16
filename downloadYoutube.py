@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, jsonify, send_file, redirect
 import requests
 import os
-import re
 
 app = Flask(__name__)
 
@@ -36,12 +35,17 @@ def download():
         proxy_response = requests.post(PROXY_URL, json=proxy_payload)
         proxy_data = proxy_response.json()
 
+        # Verifica se a resposta contém sucesso e uma URL de download válida
         if not proxy_data.get('success', False):
             raise Exception(proxy_data.get('error', 'Erro desconhecido'))
 
-        download_url = proxy_data['download_url']
-        title = proxy_data['title']
-        
+        download_url = proxy_data.get('download_url', None)
+        title = proxy_data.get('title', 'arquivo_desconhecido')
+
+        # Verifica se a URL de download está presente e válida
+        if not download_url:
+            raise ValueError("URL de download não encontrada na resposta do proxy.")
+
         # Opcional: baixar o arquivo na Vercel ou redirecionar para o link
         download_path = os.path.join(DOWNLOAD_DIRECTORY, f"{title}.mp4" if format_type != 'audio' else f"{title}.mp3")
 
