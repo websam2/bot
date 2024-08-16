@@ -1,5 +1,5 @@
-from flask import Flask, render_template, request, jsonify, send_file
-import yt_dlp
+from flask import Flask, render_template, request, jsonify, send_file, redirect
+import requests
 import os
 import re
 
@@ -7,6 +7,9 @@ app = Flask(__name__)
 
 progress = 0
 download_path = ''
+
+# URL do servidor proxy no Railway
+PROXY_URL = "https://proxy-teste.up.railway.app/proxy_download"
 
 DOWNLOAD_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'downloads')
 if not os.path.exists(DOWNLOAD_DIRECTORY):
@@ -22,47 +25,36 @@ def download():
     video_url = request.form['video_url']
     quality = request.form['quality']
     format_type = request.form['format']  # Novo parâmetro para o formato
-    
-    def progress_hook(d):
-        global progress
-        if d['status'] == 'downloading':
-            percent_str = d.get('_percent_str', '0%')
-            clean_percent = re.sub(r'\x1b\[[0-9;]*[mG]', '', percent_str)
-            progress = float(clean_percent.strip('%'))
 
-    if format_type == 'audio':
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192',
-            }],
-            'outtmpl': os.path.join(DOWNLOAD_DIRECTORY, '%(title)s.%(ext)s'),
-            'progress_hooks': [progress_hook],
-        }
-    else:
-        ydl_opts = {
-            'outtmpl': os.path.join(DOWNLOAD_DIRECTORY, '%(title)s.%(ext)s'),
-            'format': f'bestvideo[height<={quality}]+bestaudio/best',
-            'merge_output_format': 'mp4',
-            'progress_hooks': [progress_hook],
-        }
-    
+    # Envia os dados para o servidor proxy no Railway
+    proxy_payload = {
+        'video_url': video_url,
+        'quality': 'audio' if format_type == 'audio' else quality
+    }
+
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([video_url])
+        proxy_response = requests.post(PROXY_URL, json=proxy_payload)
+        proxy_data = proxy_response.json()
+
+        if not proxy_data.get('success', False):
+            raise Exception(proxy_data.get('error', 'Erro desconhecido'))
+
+        download_url = proxy_data['download_url']
+        title = proxy_data['title']
         
-        downloaded_files = os.listdir(DOWNLOAD_DIRECTORY)
-        if not downloaded_files:
-            raise Exception("Nenhum arquivo foi baixado")
-        
-        downloaded_file = downloaded_files[-1]
-        download_path = os.path.join(DOWNLOAD_DIRECTORY, downloaded_file)
-        
+        # Opcional: baixar o arquivo na Vercel ou redirecionar para o link
+        download_path = os.path.join(DOWNLOAD_DIRECTORY, f"{title}.mp4" if format_type != 'audio' else f"{title}.mp3")
+
+        # Baixa o arquivo diretamente do link fornecido pelo proxy
+        with requests.get(download_url, stream=True) as r:
+            r.raise_for_status()
+            with open(download_path, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
         print(f"Arquivo baixado: {download_path}")
-        
-        return jsonify({'success': True, 'message': 'Download concluído', 'filename': downloaded_file})
+
+        return jsonify({'success': True, 'message': 'Download concluído', 'filename': os.path.basename(download_path)})
     except Exception as e:
         print(f"Erro durante o download: {str(e)}")
         return jsonify({'success': False, 'message': str(e)})
