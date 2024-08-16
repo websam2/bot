@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download de Vídeo/Áudio do YouTube</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">Download de Vídeo/Áudio do YouTube</h1>
+        <form id="download-form" class="space-y-4">
+            <div>
+                <label for="video-url" class="block text-sm font-medium text-gray-700">URL do vídeo:</label>
+                <input type="text" id="video-url" name="video_url" required class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Formato:</label>
+                <div class="flex space-x-4">
+                    <label class="inline-flex items-center">
+                        <input type="radio" id="video" name="format" value="video" checked class="form-radio text-indigo-600">
+                        <span class="ml-2">Vídeo</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" id="audio" name="format" value="audio" class="form-radio text-indigo-600">
+                        <span class="ml-2">Áudio (MP3)</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div id="quality-options">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Qualidade (apenas para vídeo):</label>
+                <div class="flex space-x-4">
+                    <label class="inline-flex items-center">
+                        <input type="radio" id="720p" name="quality" value="720" checked class="form-radio text-indigo-600">
+                        <span class="ml-2">720p</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" id="1080p" name="quality" value="1080" class="form-radio text-indigo-600">
+                        <span class="ml-2">1080p</span>
+                    </label>
+                </div>
+            </div>
+            
+            <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Iniciar Download
+            </button>
+        </form>
+        
+        <div id="progress" class="mt-4 hidden">
+            <div class="relative pt-1">
+                <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-indigo-200">
+                    <div id="progress-bar" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-indigo-500" style="width: 0%"></div>
+                </div>
+            </div>
+            <p class="text-center text-gray-600">Progresso: <span id="progress-value">0</span>%</p>
+            <p class="text-center text-gray-600">Por favor, aguarde ;)</p>
+        </div>
+        
+        <div id="message" class="mt-4 text-center text-sm text-gray-600"></div>
+        
+        <div id="download-link" class="mt-4 text-center hidden">
+            <a href="#" id="download-button" download class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                Baixar arquivo
+            </a>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            $('input[name="format"]').change(function() {
+                if ($(this).val() === 'audio') {
+                    $('#quality-options').hide();
+                } else {
+                    $('#quality-options').show();
+                }
+            });
+
+            $('#download-form').submit(function(e) {
+                e.preventDefault();
+                var formData = $(this).serialize();
+                $('#progress').removeClass('hidden');
+                $('#download-link').addClass('hidden');
+                $.ajax({
+                    url: '/download',
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        if (response.success) {
+                            $('#message').text(response.message);
+                            $('#download-button').attr('href', '/get_file');
+                            $('#download-button').attr('download', response.filename);
+                            $('#download-link').removeClass('hidden');
+                        } else {
+                            $('#message').text('Erro: ' + response.message);
+                        }
+                        $('#progress').addClass('hidden');
+                    },
+                    error: function() {
+                        $('#message').text('Erro ao fazer o download');
+                        $('#progress').addClass('hidden');
+                    }
+                });
+
+                function updateProgress() {
+                    $.get('/progress', function(data) {
+                        var progress = data.progress.toFixed(1);
+                        $('#progress-value').text(progress);
+                        $('#progress-bar').css('width', progress + '%');
+                        if (progress < 100) {
+                            setTimeout(updateProgress, 1000);
+                        }
+                    });
+                }
+
+                updateProgress();
+            });
+        });
+    </script>
+</body>
+</html>
