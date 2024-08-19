@@ -102,8 +102,9 @@
                         }
                         $('#progress').addClass('hidden');
                     },
-                    error: function() {
-                        $('#message').text('Erro ao fazer o download');
+                    error: function(xhr, status, error) {
+                        var errorMessage = xhr.status + ': ' + xhr.statusText + ' - ' + xhr.responseText;
+                        $('#message').text('Erro ao fazer o download: ' + errorMessage);
                         $('#progress').addClass('hidden');
                     }
                 });
