@@ -1,6 +1,5 @@
-from flask import Flask, render_template, request, jsonify, redirect
+from flask import Flask, render_template, request, jsonify, redirect, url_for
 import requests
-import os
 
 app = Flask(__name__)
 
@@ -32,21 +31,16 @@ def download():
             raise Exception(proxy_data.get('error', 'Erro desconhecido'))
 
         download_url = proxy_data.get('download_url', None)
-        title = proxy_data.get('title', 'arquivo_desconhecido')
 
         # Verifica se a URL de download está presente e válida
         if not download_url:
             raise ValueError("URL de download não encontrada na resposta do proxy.")
 
         # Redireciona o usuário para a URL de download
-        return jsonify({'success': True, 'message': 'Redirecionando para o download', 'download_url': download_url})
+        return redirect(download_url)
     except Exception as e:
         print(f"Erro durante o download: {str(e)}")
         return jsonify({'success': False, 'message': str(e)})
 
-# Remoção do progresso de download e da função de envio de arquivo
-# Essas funções não são mais necessárias porque o download é redirecionado diretamente para o usuário
-
 # if __name__ == '__main__':
 #     app.run(debug=True)
-
