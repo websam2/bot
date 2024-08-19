@@ -70,6 +70,7 @@
 
     <script>
         $(document).ready(function() {
+            // Mostra/Esconde as opções de qualidade com base no formato selecionado
             $('input[name="format"]').change(function() {
                 if ($(this).val() === 'audio') {
                     $('#quality-options').hide();
@@ -77,22 +78,25 @@
                     $('#quality-options').show();
                 }
             });
-
+    
+            // Submissão do formulário de download
             $('#download-form').submit(function(e) {
                 e.preventDefault();
                 var formData = $(this).serialize();
+    
+                // Exibe o progresso
                 $('#progress').removeClass('hidden');
                 $('#download-link').addClass('hidden');
+    
+                // Realiza a requisição AJAX para iniciar o download
                 $.ajax({
                     url: '/download',
                     type: 'POST',
                     data: formData,
                     success: function(response) {
                         if (response.success) {
-                            $('#message').text(response.message);
-                            $('#download-button').attr('href', '/get_file');
-                            $('#download-button').attr('download', response.filename);
-                            $('#download-link').removeClass('hidden');
+                            // Redireciona para o URL de download diretamente
+                            window.location.href = response.download_url;
                         } else {
                             $('#message').text('Erro: ' + response.message);
                         }
@@ -103,21 +107,8 @@
                         $('#progress').addClass('hidden');
                     }
                 });
-
-                function updateProgress() {
-                    $.get('/progress', function(data) {
-                        var progress = data.progress.toFixed(1);
-                        $('#progress-value').text(progress);
-                        $('#progress-bar').css('width', progress + '%');
-                        if (progress < 100) {
-                            setTimeout(updateProgress, 1000);
-                        }
-                    });
-                }
-
-                updateProgress();
             });
         });
-    </script>
+    </script>    
 </body>
 </html>
